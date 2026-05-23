@@ -5,15 +5,14 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 from database import init_db, signup, login, save_message, get_history, clear_history
-from google.api_core.exceptions import ResourceExhausted
+from google.api_core.exceptions import ResourceExhausted, InvalidArgument
 from fpdf import FPDF
-
 
 # ---------------- CONFIG ----------------
 thanks_words = ["thank you", "thanks", "thankyou", "thx", "shukriya"]
 
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
+api_key = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY", None)
 
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -25,6 +24,8 @@ st.set_page_config(
 )
 
 init_db()
+
+# ---------------- PDF EXPORT ----------------
 def export_chat_to_pdf(chat_history):
     pdf = FPDF()
     pdf.add_page()
@@ -44,6 +45,19 @@ def export_chat_to_pdf(chat_history):
     file_path = "chat_history.pdf"
     pdf.output(file_path)
     return file_path
+
+
+def safe_generate(prompt):
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except ResourceExhausted:
+        return "Gemini free limit is reached. Showing related PDF content instead:\n\n" + st.session_state.pdf_text[:1500]
+    except InvalidArgument:
+        return "AI request was too large. Please use a smaller PDF or shorter content."
+    except Exception:
+        return "AI response failed. Please try again later."
+
 
 # ---------------- LOGIN SYSTEM ----------------
 if "logged_in" not in st.session_state:
@@ -77,6 +91,8 @@ if not st.session_state.logged_in:
     with col2:
         if os.path.exists("assets/logo.png"):
             st.image("assets/logo.png", width=140)
+        elif os.path.exists("logo.png"):
+            st.image("logo.png", width=140)
 
         st.markdown("""
         <div class="login-title">Welcome to DocuMind AI</div>
@@ -110,12 +126,14 @@ if not st.session_state.logged_in:
                 if login(gmail, password):
                     st.session_state.logged_in = True
                     st.session_state.user_gmail = gmail
+                    st.session_state.chat_history = get_history(gmail)
                     st.success("Login successful!")
                     st.rerun()
                 else:
                     st.error("Invalid Gmail or password.")
 
     st.stop()
+
 
 # ---------------- CSS ----------------
 st.markdown("""
@@ -165,7 +183,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-logo_path = "assets/logo.png"
+logo_path = "assets/logo.png" if os.path.exists("assets/logo.png") else "logo.png"
 
 st.markdown("""
 <style>
@@ -182,7 +200,6 @@ st.markdown("""
     font-size: 60px;
     font-weight: 800;
     margin-bottom: 10px;
-    letter-spacing: 1px;
 }
 
 .hero-subtitle {
@@ -212,8 +229,7 @@ with col2:
     <div class="hero-title">DocuMind AI</div>
     <div class="hero-subtitle">AI-powered OCR PDF Study Assistant</div>
     <div class="hero-text">
-        Upload scanned PDFs, ask questions,
-        generate summaries, and create exam questions.
+        Upload scanned PDFs, ask questions, generate summaries, and create exam questions.
     </div>
     """, unsafe_allow_html=True)
 
@@ -258,19 +274,6 @@ if "chat_history" not in st.session_state:
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    if st.button("📥 Export Chat to PDF"):
-     if st.session_state.chat_history:
-        pdf_path = export_chat_to_pdf(st.session_state.chat_history)
-
-        with open(pdf_path, "rb") as file:
-            st.download_button(
-                label="Download Chat PDF",
-                data=file,
-                file_name="DocuMind_Chat_History.pdf",
-                mime="application/pdf"
-            )
-    else:
-        st.warning("No chat history to export.")
     st.write(f"👤 Logged in as: {st.session_state.user_gmail}")
 
     if st.button("Logout"):
@@ -283,14 +286,26 @@ with st.sidebar:
 
     st.header("📂 Upload Document")
     uploaded_files = st.file_uploader(
-    "Choose scanned PDF files",
-    type="pdf",
-    accept_multiple_files=True
-)
+        "Choose scanned PDF files",
+        type="pdf",
+        accept_multiple_files=True
+    )
+
     st.markdown("---")
-    st.subheader("📌 Sample PDFs")
-    st.write("Use scanned notes, textbook pages, or study material PDFs.")
-    st.write("Example topics: RNN, LSTM, ADR notes, web security, database notes.")
+
+    if st.button("📥 Export Chat to PDF"):
+        if st.session_state.chat_history:
+            pdf_path = export_chat_to_pdf(st.session_state.chat_history)
+
+            with open(pdf_path, "rb") as file:
+                st.download_button(
+                    label="Download Chat PDF",
+                    data=file,
+                    file_name="DocuMind_Chat_History.pdf",
+                    mime="application/pdf"
+                )
+        else:
+            st.warning("No chat history to export.")
 
     st.markdown("---")
 
@@ -298,7 +313,6 @@ with st.sidebar:
         clear_history(st.session_state.user_gmail)
         st.session_state.chat_history = []
         st.success("Chat cleared!")
-        
 
 # ---------------- PDF PROCESSING ----------------
 if uploaded_files:
@@ -309,10 +323,13 @@ if uploaded_files:
 
     with st.spinner("📖 Reading PDFs and extracting text using OCR..."):
         for uploaded_file in uploaded_files:
-            images = convert_from_bytes(
-                uploaded_file.read(),
-                poppler_path=r"C:\Release-24.08.0-0\poppler-24.08.0\Library\bin"
-            )
+            if os.name == "nt":
+                images = convert_from_bytes(
+                    uploaded_file.read(),
+                    poppler_path=r"C:\Release-24.08.0-0\poppler-24.08.0\Library\bin"
+                )
+            else:
+                images = convert_from_bytes(uploaded_file.read())
 
             total_pages += len(images)
 
@@ -323,42 +340,46 @@ if uploaded_files:
         st.session_state.pdf_text = full_text
 
     st.info(f"📄 Total Pages: {total_pages} | 🔤 Characters Extracted: {len(full_text)}")
+
 # ---------------- TABS ----------------
-tab1, tab2, tab3 = st.tabs(["💬 Chat", "📌 Summary", "📝 Questions"])
+tab1, tab2, tab3 = st.tabs(["💬 Chat", "📌 Summary / Notes", "📝 Questions"])
 
 with tab1:
     st.markdown("### 🔍 Search in PDF")
 
-search_query = st.text_input("Search any keyword from PDF")
+    search_query = st.text_input("Search any keyword from PDF")
 
-if search_query:
-    pdf_lines = st.session_state.pdf_text.split("\n")
+    if search_query:
+        matched_lines = [
+            line for line in st.session_state.pdf_text.split("\n")
+            if search_query.lower() in line.lower()
+        ]
 
-    matched_lines = []
+        if matched_lines:
+            st.success(f"Found {len(matched_lines)} matching results")
 
-    for line in pdf_lines:
-        if search_query.lower() in line.lower():
-            matched_lines.append(line)
+            for result in matched_lines[:20]:
+                st.markdown(f"""
+                <div style="
+                background:#222;
+                padding:12px;
+                border-radius:10px;
+                margin-bottom:10px;
+                border-left:4px solid #888;
+                color:white;
+                ">
+                {result}
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.warning("No matching results found.")
 
-    if matched_lines:
-        st.success(f"Found {len(matched_lines)} matching results")
+    st.markdown("### 💬 Chat with your PDF")
 
-        for result in matched_lines[:20]:
-            st.markdown(f"""
-<div style="
-background:#222;
-padding:12px;
-border-radius:10px;
-margin-bottom:10px;
-border-left:4px solid #888;
-color:white;
-">
-{result}
-</div>
-""", unsafe_allow_html=True)
-
-    else:
-        st.warning("No matching results found.")
+    for role, message in st.session_state.chat_history:
+        if message and str(message).strip() and str(message) != "None":
+            with st.chat_message(role):
+                st.write(message)
 
     question = st.chat_input("Ask a question from PDF")
 
@@ -412,19 +433,14 @@ RULES:
 5. Make answers easy to understand for students.
 
 PDF Context:
-{st.session_state.pdf_text}
+{st.session_state.pdf_text[:12000]}
 
 Question:
 {question}
 """
 
                 with st.spinner("🤖 AI is thinking..."):
-                    try:
-                        response = model.generate_content(prompt)
-                        answer = response.text
-                    except ResourceExhausted:
-                     answer = "Gemini free limit is reached. Showing related PDF content instead:\n\n"
-                     answer += st.session_state.pdf_text[:1500]
+                    answer = safe_generate(prompt)
 
             st.session_state.chat_history.append(("user", question))
             st.session_state.chat_history.append(("assistant", answer))
@@ -432,21 +448,35 @@ Question:
             save_message(st.session_state.user_gmail, "user", question)
             save_message(st.session_state.user_gmail, "assistant", answer)
 
-    for role, message in st.session_state.chat_history:
-        if message and str(message).strip() and str(message) != "None":
-            with st.chat_message(role):
-                st.write(message)
+            st.rerun()
+
 with tab2:
     st.markdown("### 📌 PDF Summary")
 
+    if st.button("Generate Summary", use_container_width=True):
+        if not st.session_state.pdf_text.strip():
+            st.warning("Please upload a PDF first.")
+        else:
+            summary_prompt = f"""
+You are an AI study assistant.
+
+Summarize the document below in simple student-friendly language.
+Use headings and bullet points.
+
+Context:
+{st.session_state.pdf_text[:12000]}
+"""
+            with st.spinner("📌 Generating summary..."):
+                summary_answer = safe_generate(summary_prompt)
+
+            st.write(summary_answer)
+
+    st.markdown("### 📘 AI Notes")
+
     if st.button("📘 Generate AI Notes", use_container_width=True):
-
-     if not st.session_state.pdf_text.strip():
-        st.warning("Please upload a PDF first.")
-
-    else:
-        with st.spinner("🧠 Creating smart study notes..."):
-
+        if not st.session_state.pdf_text.strip():
+            st.warning("Please upload a PDF first.")
+        else:
             notes_prompt = f"""
 You are an AI study notes generator.
 
@@ -460,17 +490,12 @@ RULES:
 - Include definitions where needed
 
 Document:
-{st.session_state.pdf_text}
+{st.session_state.pdf_text[:12000]}
 """
+            with st.spinner("🧠 Creating smart study notes..."):
+                notes_answer = safe_generate(notes_prompt)
 
-            try:
-                notes_response = model.generate_content(notes_prompt)
-
-                st.subheader("📘 AI Generated Notes")
-                st.write(notes_response.text)
-
-            except ResourceExhausted:
-                st.error("Gemini free limit reached. Please try later.")
+            st.write(notes_answer)
 
 with tab3:
     st.markdown("### 📝 Important Questions")
@@ -479,8 +504,7 @@ with tab3:
         if not st.session_state.pdf_text.strip():
             st.warning("Please upload a PDF first.")
         else:
-            with st.spinner("📝 Generating important questions..."):
-                questions_prompt = f"""
+            questions_prompt = f"""
 You are an AI exam preparation assistant.
 
 From the document below, generate 15 important exam questions.
@@ -495,13 +519,12 @@ Do not write explanations.
 Only list questions row by row.
 
 Context:
-{st.session_state.pdf_text}
+{st.session_state.pdf_text[:12000]}
 """
-                try:
-                    questions_response = model.generate_content(questions_prompt)
-                    st.write(questions_response.text)
-                except ResourceExhausted:
-                    st.error("Gemini free limit is reached. Please wait for some time and try again.")
+            with st.spinner("📝 Generating important questions..."):
+                questions_answer = safe_generate(questions_prompt)
+
+            st.write(questions_answer)
 
 # ---------------- FOOTER ----------------
 st.markdown("""
