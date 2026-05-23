@@ -8,7 +8,6 @@ from database import init_db, signup, login, save_message, get_history, clear_hi
 from google.api_core.exceptions import ResourceExhausted, InvalidArgument
 from fpdf import FPDF
 
-# ---------------- CONFIG ----------------
 thanks_words = ["thank you", "thanks", "thankyou", "thx", "shukriya"]
 
 load_dotenv()
@@ -17,20 +16,14 @@ api_key = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY", None)
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-st.set_page_config(
-    page_title="DocuMind AI",
-    page_icon="🧠",
-    layout="wide"
-)
+st.set_page_config(page_title="DocuMind AI", page_icon="🧠", layout="wide")
 
 init_db()
 
-# ---------------- PDF EXPORT ----------------
 def export_chat_to_pdf(chat_history):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-
     pdf.cell(0, 10, "DocuMind AI Chat History", ln=True, align="C")
     pdf.ln(10)
 
@@ -46,20 +39,23 @@ def export_chat_to_pdf(chat_history):
     pdf.output(file_path)
     return file_path
 
-
 def safe_generate(prompt):
+    short_prompt = prompt[:3500]
+
     try:
-        response = model.generate_content(prompt)
+        response = model.generate_content(short_prompt)
         return response.text
+
     except ResourceExhausted:
-        return "Gemini free limit is reached. Showing related PDF content instead:\n\n" + st.session_state.pdf_text[:1500]
+        return "Gemini free limit reached. Showing related PDF content instead:\n\n" + st.session_state.pdf_text[:1500]
+
     except InvalidArgument:
-        return "AI request was too large. Please use a smaller PDF or shorter content."
+        return "AI request too large. Please ask a shorter question or use a smaller PDF."
+
     except Exception:
         return "AI response failed. Please try again later."
 
-
-# ---------------- LOGIN SYSTEM ----------------
+# ---------------- LOGIN ----------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -76,7 +72,6 @@ if not st.session_state.logged_in:
         text-align: center;
         margin-bottom: 8px;
     }
-
     .login-subtitle {
         color: #9CA3AF;
         font-size: 15px;
@@ -134,7 +129,6 @@ if not st.session_state.logged_in:
 
     st.stop()
 
-
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
@@ -149,44 +143,31 @@ st.markdown("""
     transition: all 0.3s ease;
     min-height: 135px;
 }
-
 .feature-card:hover {
     transform: translateY(-6px);
     border-color: #AAAAAA;
     box-shadow: 0 10px 25px rgba(0,0,0,0.28);
 }
-
 .feature-icon {
     font-size: 34px;
 }
-
 .feature-title {
     font-size: 21px;
     font-weight: bold;
     margin-top: 10px;
     color: #FFFFFF;
 }
-
 .feature-text {
     color: #D1D5DB;
     font-size: 15px;
     margin-top: 6px;
 }
-
 .footer {
     text-align: center;
     color: gray;
     font-size: 14px;
     margin-top: 40px;
 }
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- HEADER ----------------
-logo_path = "assets/logo.png" if os.path.exists("assets/logo.png") else "logo.png"
-
-st.markdown("""
-<style>
 .hero-box {
     background: linear-gradient(135deg, #111111, #2F2F2F);
     padding: 35px 45px;
@@ -194,20 +175,17 @@ st.markdown("""
     margin-bottom: 30px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.30);
 }
-
 .hero-title {
     color: white;
     font-size: 60px;
     font-weight: 800;
     margin-bottom: 10px;
 }
-
 .hero-subtitle {
     color: #D1D5DB;
     font-size: 22px;
     margin-bottom: 10px;
 }
-
 .hero-text {
     color: #9CA3AF;
     font-size: 17px;
@@ -215,6 +193,9 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ---------------- HEADER ----------------
+logo_path = "assets/logo.png" if os.path.exists("assets/logo.png") else "logo.png"
 
 st.markdown('<div class="hero-box">', unsafe_allow_html=True)
 
@@ -296,7 +277,6 @@ with st.sidebar:
     if st.button("📥 Export Chat to PDF"):
         if st.session_state.chat_history:
             pdf_path = export_chat_to_pdf(st.session_state.chat_history)
-
             with open(pdf_path, "rb") as file:
                 st.download_button(
                     label="Download Chat PDF",
@@ -357,7 +337,6 @@ with tab1:
 
         if matched_lines:
             st.success(f"Found {len(matched_lines)} matching results")
-
             for result in matched_lines[:20]:
                 st.markdown(f"""
                 <div style="
@@ -395,45 +374,18 @@ You are an intelligent AI study assistant.
 
 Your job is to answer student questions clearly and professionally.
 
-FIRST check the PDF context carefully.
+First check the PDF context carefully.
 
-RULES:
-
-1. If the answer is present in the PDF context:
-   - Answer using the PDF content.
-   - Improve the explanation in simple student-friendly language.
-
-2. If the answer is NOT present in the PDF:
-   - Use your own AI knowledge to answer the question completely.
-   - Give a proper educational answer.
-
-3. Answer style based on marks:
-
-- 2 marks:
-  Give only short definition or direct answer.
-
-- 5 marks:
-  Give:
-  • Definition
-  • Explanation
-  • Key points
-
-- 10 marks:
-  Give:
-  • Definition
-  • Detailed explanation
-  • Key points
-  • Example
-  • Advantages
-  • Limitations
-  • Conclusion
-
-4. Always use headings and bullet points.
-
-5. Make answers easy to understand for students.
+Rules:
+1. If the answer is present in the PDF context, answer using the PDF content.
+2. If the answer is not present in the PDF, use your own AI knowledge.
+3. For 2 marks, give a short answer.
+4. For 5 marks, give definition, explanation, and key points.
+5. For 10 marks, give definition, detailed explanation, example, advantages, limitations, and conclusion.
+6. Use simple student-friendly language.
 
 PDF Context:
-st.session_state.pdf_text[:4000]
+{st.session_state.pdf_text[:4000]}
 
 Question:
 {question}
@@ -464,7 +416,7 @@ Summarize the document below in simple student-friendly language.
 Use headings and bullet points.
 
 Context:
-st.session_state.pdf_text[:4000]
+{st.session_state.pdf_text[:4000]}
 """
             with st.spinner("📌 Generating summary..."):
                 summary_answer = safe_generate(summary_prompt)
@@ -482,7 +434,7 @@ You are an AI study notes generator.
 
 Create clean and well-structured study notes from the document below.
 
-RULES:
+Rules:
 - Use simple student-friendly language
 - Use headings and bullet points
 - Highlight important concepts
@@ -490,7 +442,7 @@ RULES:
 - Include definitions where needed
 
 Document:
-st.session_state.pdf_text[:4000]
+{st.session_state.pdf_text[:4000]}
 """
             with st.spinner("🧠 Creating smart study notes..."):
                 notes_answer = safe_generate(notes_prompt)
@@ -509,7 +461,7 @@ You are an AI exam preparation assistant.
 
 From the document below, generate 15 important exam questions.
 
-Write the output ONLY in numbered rows like this:
+Write the output only in numbered rows like this:
 1. Question
 2. Question
 3. Question
@@ -519,7 +471,7 @@ Do not write explanations.
 Only list questions row by row.
 
 Context:
-st.session_state.pdf_text[:4000]
+{st.session_state.pdf_text[:4000]}
 """
             with st.spinner("📝 Generating important questions..."):
                 questions_answer = safe_generate(questions_prompt)
