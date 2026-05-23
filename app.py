@@ -433,7 +433,7 @@ RULES:
 5. Make answers easy to understand for students.
 
 PDF Context:
-{st.session_state.pdf_text[:12000]}
+st.session_state.pdf_text[:4000]
 
 Question:
 {question}
@@ -464,7 +464,7 @@ Summarize the document below in simple student-friendly language.
 Use headings and bullet points.
 
 Context:
-{st.session_state.pdf_text[:12000]}
+st.session_state.pdf_text[:4000]
 """
             with st.spinner("📌 Generating summary..."):
                 summary_answer = safe_generate(summary_prompt)
@@ -490,7 +490,7 @@ RULES:
 - Include definitions where needed
 
 Document:
-{st.session_state.pdf_text[:12000]}
+st.session_state.pdf_text[:4000]
 """
             with st.spinner("🧠 Creating smart study notes..."):
                 notes_answer = safe_generate(notes_prompt)
@@ -519,7 +519,7 @@ Do not write explanations.
 Only list questions row by row.
 
 Context:
-{st.session_state.pdf_text[:12000]}
+st.session_state.pdf_text[:4000]
 """
             with st.spinner("📝 Generating important questions..."):
                 questions_answer = safe_generate(questions_prompt)
