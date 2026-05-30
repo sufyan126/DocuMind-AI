@@ -39,21 +39,21 @@ def export_chat_to_pdf(chat_history):
     pdf.output(file_path)
     return file_path
 
-def safe_generate(prompt):
-    short_prompt = prompt[:3500]
 
+def safe_generate(prompt):
     try:
-        response = model.generate_content(short_prompt)
+        response = model.generate_content(prompt)
         return response.text
 
     except ResourceExhausted:
-        return "Gemini free limit reached. Showing related PDF content instead:\n\n" + st.session_state.pdf_text[:1500]
+        return "Gemini free limit reached. Please try again later."
 
     except InvalidArgument:
         return "AI request too large. Please ask a shorter question or use a smaller PDF."
 
-    except Exception:
+    except Exception as e:
         return "AI response failed. Please try again later."
+
 
 # ---------------- LOGIN ----------------
 if "logged_in" not in st.session_state:
@@ -129,6 +129,7 @@ if not st.session_state.logged_in:
 
     st.stop()
 
+
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
@@ -194,6 +195,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
 # ---------------- HEADER ----------------
 logo_path = "assets/logo.png" if os.path.exists("assets/logo.png") else "logo.png"
 
@@ -215,6 +217,7 @@ with col2:
     """, unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------- FEATURE CARDS ----------------
 c1, c2, c3 = st.columns(3)
@@ -246,12 +249,14 @@ with c3:
     </div>
     """, unsafe_allow_html=True)
 
+
 # ---------------- SESSION STATE ----------------
 if "pdf_text" not in st.session_state:
     st.session_state.pdf_text = ""
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = get_history(st.session_state.user_gmail)
+
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -277,6 +282,7 @@ with st.sidebar:
     if st.button("📥 Export Chat to PDF"):
         if st.session_state.chat_history:
             pdf_path = export_chat_to_pdf(st.session_state.chat_history)
+
             with open(pdf_path, "rb") as file:
                 st.download_button(
                     label="Download Chat PDF",
@@ -293,6 +299,7 @@ with st.sidebar:
         clear_history(st.session_state.user_gmail)
         st.session_state.chat_history = []
         st.success("Chat cleared!")
+
 
 # ---------------- PDF PROCESSING ----------------
 if uploaded_files:
@@ -321,8 +328,10 @@ if uploaded_files:
 
     st.info(f"📄 Total Pages: {total_pages} | 🔤 Characters Extracted: {len(full_text)}")
 
+
 # ---------------- TABS ----------------
 tab1, tab2, tab3 = st.tabs(["💬 Chat", "📌 Summary / Notes", "📝 Questions"])
+
 
 with tab1:
     st.markdown("### 🔍 Search in PDF")
@@ -369,23 +378,22 @@ with tab1:
             if any(word in question.lower() for word in thanks_words):
                 answer = "You're welcome! 😊 I'm happy to help you."
             else:
+                pdf_context = st.session_state.pdf_text[:1500]
+
                 prompt = f"""
 You are an intelligent AI study assistant.
 
-Your job is to answer student questions clearly and professionally.
-
-First check the PDF context carefully.
+Answer the student question using the PDF context if available.
+If the answer is not in the PDF context, use your own AI knowledge.
 
 Rules:
-1. If the answer is present in the PDF context, answer using the PDF content.
-2. If the answer is not present in the PDF, use your own AI knowledge.
-3. For 2 marks, give a short answer.
-4. For 5 marks, give definition, explanation, and key points.
-5. For 10 marks, give definition, detailed explanation, example, advantages, limitations, and conclusion.
-6. Use simple student-friendly language.
+- Use simple student-friendly language.
+- If user asks for 2 marks, give a short answer.
+- If user asks for 5 marks, give definition, explanation, and key points.
+- If user asks for 10 marks, give definition, detailed explanation, example, advantages, limitations, and conclusion.
 
 PDF Context:
-{st.session_state.pdf_text[:4000]}
+{pdf_context}
 
 Question:
 {question}
@@ -402,6 +410,7 @@ Question:
 
             st.rerun()
 
+
 with tab2:
     st.markdown("### 📌 PDF Summary")
 
@@ -409,15 +418,16 @@ with tab2:
         if not st.session_state.pdf_text.strip():
             st.warning("Please upload a PDF first.")
         else:
-            summary_prompt = f"""
-You are an AI study assistant.
+            pdf_context = st.session_state.pdf_text[:1500]
 
+            summary_prompt = f"""
 Summarize the document below in simple student-friendly language.
 Use headings and bullet points.
 
 Context:
-{st.session_state.pdf_text[:4000]}
+{pdf_context}
 """
+
             with st.spinner("📌 Generating summary..."):
                 summary_answer = safe_generate(summary_prompt)
 
@@ -429,25 +439,26 @@ Context:
         if not st.session_state.pdf_text.strip():
             st.warning("Please upload a PDF first.")
         else:
-            notes_prompt = f"""
-You are an AI study notes generator.
+            pdf_context = st.session_state.pdf_text[:1500]
 
+            notes_prompt = f"""
 Create clean and well-structured study notes from the document below.
 
 Rules:
-- Use simple student-friendly language
-- Use headings and bullet points
-- Highlight important concepts
-- Keep notes concise but informative
-- Include definitions where needed
+- Use simple language.
+- Use headings and bullet points.
+- Highlight important concepts.
+- Include definitions where needed.
 
 Document:
-{st.session_state.pdf_text[:4000]}
+{pdf_context}
 """
+
             with st.spinner("🧠 Creating smart study notes..."):
                 notes_answer = safe_generate(notes_prompt)
 
             st.write(notes_answer)
+
 
 with tab3:
     st.markdown("### 📝 Important Questions")
@@ -456,27 +467,27 @@ with tab3:
         if not st.session_state.pdf_text.strip():
             st.warning("Please upload a PDF first.")
         else:
-            questions_prompt = f"""
-You are an AI exam preparation assistant.
+            pdf_context = st.session_state.pdf_text[:1500]
 
+            questions_prompt = f"""
 From the document below, generate 15 important exam questions.
 
-Write the output only in numbered rows like this:
+Write only numbered questions like:
 1. Question
 2. Question
 3. Question
 
-Do not use headings.
 Do not write explanations.
-Only list questions row by row.
 
 Context:
-{st.session_state.pdf_text[:4000]}
+{pdf_context}
 """
+
             with st.spinner("📝 Generating important questions..."):
                 questions_answer = safe_generate(questions_prompt)
 
             st.write(questions_answer)
+
 
 # ---------------- FOOTER ----------------
 st.markdown("""
