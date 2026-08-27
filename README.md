@@ -1,4 +1,4 @@
-# 🤖 DocuMind AI
+#  DocuMind AI
 
 **DocuMind AI** is an AI-powered document analysis and question-answering application built with **Python and Streamlit**.
 
@@ -6,19 +6,19 @@ The application allows users to upload PDF documents, including scanned PDFs, an
 
 The project demonstrates how **Artificial Intelligence, OCR, document processing, and Retrieval-Augmented Generation (RAG)** can be combined to create an interactive document assistant.
 
-## 🚀 Features
+##  Features
 
-* 📄 Upload PDF documents
-* 🔍 Extract text from documents
-* 🖼️ Support for scanned/image-based PDFs using OCR
-* 🤖 Ask questions about uploaded documents
-* 💬 AI-powered document Q&A
-* 🧠 Context-aware responses
-* 📚 Process document content for retrieval
-* 🌐 Interactive Streamlit interface
-* ⚡ Simple and user-friendly UI
+*  Upload PDF documents
+*  Extract text from documents
+*  Support for scanned/image-based PDFs using OCR
+*  Ask questions about uploaded documents
+*  AI-powered document Q&A
+*  Context-aware responses
+*  Process document content for retrieval
+*  Interactive Streamlit interface
+*  Simple and user-friendly UI
 
-## 🛠️ Technologies Used
+##  Technologies Used
 
 * **Python**
 * **Streamlit**
@@ -30,7 +30,7 @@ The project demonstrates how **Artificial Intelligence, OCR, document processing
 * **RAG (Retrieval-Augmented Generation)**
 * **Generative AI / LLM**
 
-## 🧠 How DocuMind AI Works
+##  How DocuMind AI Works
 
 The application follows a document-question-answering pipeline:
 
@@ -56,7 +56,7 @@ AI Model
 Generated Answer
 ```
 
-## 📂 Project Structure
+##  Project Structure
 
 ```text
 DocuMind-AI/
@@ -70,7 +70,7 @@ DocuMind-AI/
 
 > The exact structure may vary depending on the implementation and additional modules used.
 
-## ⚙️ Installation
+##  Installation
 
 ### 1. Clone the Repository
 
@@ -104,7 +104,7 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 🔧 OCR Setup
+##  OCR Setup
 
 DocuMind AI can use **Tesseract OCR** to extract text from scanned or image-based PDF documents.
 
@@ -114,7 +114,7 @@ You may also need **Poppler** for converting PDF pages into images.
 
 After installation, make sure the required executable paths are correctly configured in your application.
 
-## ▶️ Run the Application
+##  Run the Application
 
 Start the Streamlit application:
 
@@ -130,7 +130,7 @@ http://localhost:8501
 
 Open the URL in your browser.
 
-## 📖 How to Use
+##  How to Use
 
 ### Step 1 — Upload a PDF
 
@@ -162,26 +162,26 @@ Summarize the important points from this document.
 
 DocuMind AI retrieves relevant information from the document and uses the AI model to generate an answer.
 
-## 🎯 Project Objective
+##  Project Objective
 
 The goal of DocuMind AI is to make it easier for users to interact with large or difficult-to-search PDF documents using natural language.
 
 Instead of manually searching through multiple pages, users can simply ask questions and receive answers based on the document's content.
 
-## 💡 Use Cases
+##  Use Cases
 
 DocuMind AI can be useful for:
 
-* 📚 Students studying from PDF notes
-* 📑 Researchers analyzing papers
-* 📖 Reading books and reports
-* 🏢 Business document analysis
-* 📝 Summarizing documents
-* 📋 Extracting important information
-* 🔍 Searching large PDF files
-* 📄 Analyzing scanned documents
+*  Students studying from PDF notes
+*  Researchers analyzing papers
+*  Reading books and reports
+*  Business document analysis
+*  Summarizing documents
+*  Extracting important information
+*  Searching large PDF files
+*  Analyzing scanned documents
 
-## 🧠 Key Concepts Learned
+##  Key Concepts Learned
 
 This project helped in understanding and practicing:
 
@@ -200,24 +200,24 @@ This project helped in understanding and practicing:
 * Virtual environments
 * Git and GitHub
 
-## 🔮 Future Improvements
+##  Future Improvements
 
 The project can be improved by adding:
 
-* 📚 Multiple PDF upload support
-* 💬 Chat history
-* 🧠 Better RAG pipeline
-* 🔎 Semantic search
-* 📊 Document summarization
-* 📑 Page-wise citations
-* 🗂️ Document management
-* 🎤 Voice-based questions
-* 🌍 Multi-language support
-* 📥 Export answers as PDF
-* 🔐 User authentication
-* ☁️ Cloud deployment
+*  Multiple PDF upload support
+*  Chat history
+*  Better RAG pipeline
+*  Semantic search
+*  Document summarization
+*  Page-wise citations
+*  Document management
+*  Voice-based questions
+*  Multi-language support
+*  Export answers as PDF
+*  User authentication
+*  Cloud deployment
 
-## ⚠️ Limitations
+##  Limitations
 
 The quality of answers depends on:
 
@@ -229,21 +229,21 @@ The quality of answers depends on:
 
 Scanned or low-quality documents may produce less accurate text extraction.
 
-## 👨‍💻 Author
+##  Author
 
 **Sufyan Mohiuddin**
 
 Data Science Student | Python | Data Analytics | Machine Learning | Generative AI
 
-## ⭐ Project Status
+##  Project Status
 
-**Completed ✅**
+**Completed **
 
 DocuMind AI was developed as a practical project to explore **AI-powered document analysis, OCR, PDF processing, and RAG-based question answering**.
 
 ---
 
-## 📌 Keywords
+##  Keywords
 
 ```text
 Python
@@ -261,4 +261,4 @@ Question Answering
 Document Analysis
 ```
 
-⭐ If you find this project useful, consider giving the repository a star on GitHub.
+ If you find this project useful, consider giving the repository a star on GitHub.
